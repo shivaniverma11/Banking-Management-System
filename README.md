@@ -1,3 +1,4 @@
+Shivani Verma- 24scse1180564 Jay Kumar Mishra- 24scse1180050 Silki Kumari- 24scse1180624
 # Banking-Management-System
 A java-based Banking Management System that uses MySQL for secure data storage, enabling users to manage accounts, perform transactions, and view records efficiently.
 
