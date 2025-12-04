@@ -1,202 +1,260 @@
-import java.util.*;
+ import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionListener;
+import java.util.HashMap;
+import java.util.Map;
 
-abstract class BankAccount {
-    private String accountNumber;
-    private String accountHolderName;
-    private String pin;
-    protected double balance;
+class Account {
+    private String username;
+    private String password;
+    private double balance;
 
-    public BankAccount(String accountNumber, String accountHolderName, double initialBalance, String pin) {
-        this.accountNumber = accountNumber;
-        this.accountHolderName = accountHolderName;
-        this.balance = initialBalance;
-        this.pin = pin;
+    public Account(String username, String password, double balance) {
+        this.username = username;
+        this.password = password;
+        this.balance = balance;
     }
 
-    public boolean authenticate(String enteredpin) {
-        return pin.equals(enteredpin);
+    public String getUsername() { return username; }
+    public String getPassword() { return password; }
+    public double getBalance() { return balance; }
+    public void setBalance(double balance) { this.balance = balance; }
+}
+
+class Bank {
+    private Map<String, Account> accounts = new HashMap<>();
+
+    public boolean signup(String username, String password, double initialBalance) {
+        if (accounts.containsKey(username)) return false;
+        accounts.put(username, new Account(username, password, initialBalance));
+        return true;
     }
 
-    public void deposit(double amount) {
-        if (amount > 0) {
-            balance += amount;
-            System.out.println("Deposited: " + amount);
-        } else {
-            System.out.println("Invalid deposit amount.");
-        }
+    public Account login(String username, String password) {
+        Account acc = accounts.get(username);
+        if (acc != null && acc.getPassword().equals(password)) return acc;
+        return null;
     }
 
-    public abstract void withdraw(double amount);
-
-    public double getBalance() {
-        return balance;
+    public boolean deposit(Account acc, double amount) {
+        if (amount <= 0) return false;
+        acc.setBalance(acc.getBalance() + amount);
+        return true;
     }
 
-    public String getAccountNumber() {
-        return accountNumber;
-    }
-
-    public String getAccountHolderName() {
-        return accountHolderName;
+    public boolean withdraw(Account acc, double amount) {
+        if (amount <= 0 || acc.getBalance() < amount) return false;
+        acc.setBalance(acc.getBalance() - amount);
+        return true;
     }
 }
 
-class SavingsAccount extends BankAccount {
-    private double minimumBalance = 500.0;
+public class BankManagementSystem extends JFrame {
+    private Bank bank = new Bank();
+    private Account currentAccount;
+    private JPanel loginPanel, signupPanel, connPanel, depositPanel, fastCashPanel, withdrawPanel;
+    private CardLayout cardLayout;
 
-    public SavingsAccount(String accountNumber, String accountHolderName, double initialBalance, String pin) {
-        super(accountNumber, accountHolderName, initialBalance, pin);
+    public BankManagementSystem() {
+        setTitle("Bank Management System");
+        setSize(400, 300);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        cardLayout = new CardLayout();
+        setLayout(cardLayout);
+
+        createLoginPanel();
+        createSignupPanel();
+        createConnPanel();
+        createDepositPanel();
+        createFastCashPanel();
+        createWithdrawPanel();
+
+        add(loginPanel, "Login");
+        add(signupPanel, "Signup");
+        add(connPanel, "Conn");
+        add(depositPanel, "Deposit");
+        add(fastCashPanel, "FastCash");
+        add(withdrawPanel, "Withdraw");
+
+        cardLayout.show(getContentPane(), "Login");
     }
 
-    @Override
-    public void withdraw(double amount) {
-        if (amount > 0 && (balance - amount) >= minimumBalance) {
-            balance -= amount;
-            System.out.println("Withdrawn: " + amount);
-        } else {
-            System.out.println("Insufficient balance or invalid amount.");
-        }
+    private void createLoginPanel() {
+        loginPanel = new JPanel(new GridLayout(4, 2));
+        JTextField usernameField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        JButton loginBtn = new JButton("Login");
+        JButton signupBtn = new JButton("Go to Signup");
+
+        loginPanel.add(new JLabel("Username:"));
+        loginPanel.add(usernameField);
+        loginPanel.add(new JLabel("Password:"));
+        loginPanel.add(passwordField);
+        loginPanel.add(loginBtn);
+        loginPanel.add(signupBtn);
+
+        loginBtn.addActionListener(e -> {
+            String username = usernameField.getText();
+            String password = new String(passwordField.getPassword());
+            currentAccount = bank.login(username, password);
+            if (currentAccount != null) {
+                JOptionPane.showMessageDialog(this, "Login successful!");
+                cardLayout.show(getContentPane(), "Conn");
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid credentials!");
+            }
+        });
+
+        signupBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Signup"));
     }
-}
 
-class CurrentAccount extends BankAccount {
-    private double overdraftLimit = 1000.0;
+    private void createSignupPanel() {
+        signupPanel = new JPanel(new GridLayout(5, 2));
+        JTextField usernameField = new JTextField();
+        JPasswordField passwordField = new JPasswordField();
+        JTextField balanceField = new JTextField();
+        JButton signupBtn = new JButton("Signup");
+        JButton backBtn = new JButton("Back to Login");
 
-    public CurrentAccount(String accountNumber, String accountHolderName, double initialBalance, String pin) {
-        super(accountNumber, accountHolderName, initialBalance, pin);
+        signupPanel.add(new JLabel("Username:"));
+        signupPanel.add(usernameField);
+        signupPanel.add(new JLabel("Password:"));
+        signupPanel.add(passwordField);
+        signupPanel.add(new JLabel("Initial Balance:"));
+        signupPanel.add(balanceField);
+        signupPanel.add(signupBtn);
+        signupPanel.add(backBtn);
+
+        signupBtn.addActionListener(e -> {
+            try {
+                String username = usernameField.getText();
+                String password = new String(passwordField.getPassword());
+                double balance = Double.parseDouble(balanceField.getText());
+                if (bank.signup(username, password, balance)) {
+                    JOptionPane.showMessageDialog(this, "Signup successful!");
+                    cardLayout.show(getContentPane(), "Login");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Username already exists!");
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid balance!");
+            }
+        });
+
+        backBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Login"));
     }
 
-    @Override
-    public void withdraw(double amount) {
-        if (amount > 0 && (balance - amount) >= -overdraftLimit) {
-            balance -= amount;
-            System.out.println("Withdrawn: " + amount);
-        } else {
-            System.out.println("Overdraft limit exceeded or invalid amount.");
-        }
-    }
-}
+    private void createConnPanel() {
+        connPanel = new JPanel(new GridLayout(6, 1));
+        JButton depositBtn = new JButton("Deposit");
+        JButton fastCashBtn = new JButton("Fast Cash");
+        JButton withdrawBtn = new JButton("Withdraw");
+        JButton balanceBtn = new JButton("Check Balance");
+        JButton logoutBtn = new JButton("Logout");
 
-public class BankingSystem {
-    private static Map<String, BankAccount> accounts = new HashMap<String, BankAccount>();
+        connPanel.add(new JLabel("Welcome to Bank Management"));
+        connPanel.add(depositBtn);
+        connPanel.add(fastCashBtn);
+        connPanel.add(withdrawBtn);
+        connPanel.add(balanceBtn);
+        connPanel.add(logoutBtn);
+
+        depositBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Deposit"));
+        fastCashBtn.addActionListener(e -> cardLayout.show(getContentPane(), "FastCash"));
+        withdrawBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Withdraw"));
+        balanceBtn.addActionListener(e -> JOptionPane.showMessageDialog(this, "Balance: $" + currentAccount.getBalance()));
+        logoutBtn.addActionListener(e -> {
+            currentAccount = null;
+            cardLayout.show(getContentPane(), "Login");
+        });
+    }
+
+    private void createDepositPanel() {
+        depositPanel = new JPanel(new GridLayout(4, 2));
+        JTextField amountField = new JTextField();
+        JButton depositBtn = new JButton("Deposit");
+        JButton backBtn = new JButton("Back");
+
+        depositPanel.add(new JLabel("Amount:"));
+        depositPanel.add(amountField);
+        depositPanel.add(depositBtn);
+        depositPanel.add(backBtn);
+
+        depositBtn.addActionListener(e -> {
+            try {
+                double amount = Double.parseDouble(amountField.getText());
+                if (bank.deposit(currentAccount, amount)) {
+                    JOptionPane.showMessageDialog(this, "Deposit successful! New balance: $" + currentAccount.getBalance());
+                    amountField.setText("");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Invalid amount!");
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid amount!");
+            }
+        });
+
+        backBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Conn"));
+    }
+
+    private void createFastCashPanel() {
+        fastCashPanel = new JPanel(new GridLayout(5, 2));
+        JButton twentyBtn = new JButton("$20");
+        JButton fiftyBtn = new JButton("$50");
+        JButton hundredBtn = new JButton("$100");
+        JButton backBtn = new JButton("Back");
+
+        fastCashPanel.add(new JLabel("Fast Cash Options:"));
+        fastCashPanel.add(new JLabel(""));
+        fastCashPanel.add(twentyBtn);
+        fastCashPanel.add(fiftyBtn);
+        fastCashPanel.add(hundredBtn);
+        fastCashPanel.add(backBtn);
+
+        ActionListener fastCashListener = e -> {
+            double amount = Double.parseDouble(e.getActionCommand().substring(1));
+            if (bank.withdraw(currentAccount, amount)) {
+                JOptionPane.showMessageDialog(this, "Withdrawal successful! New balance: $" + currentAccount.getBalance());
+            } else {
+                JOptionPane.showMessageDialog(this, "Insufficient funds!");
+            }
+        };
+
+        twentyBtn.addActionListener(fastCashListener);
+        fiftyBtn.addActionListener(fastCashListener);
+        hundredBtn.addActionListener(fastCashListener);
+        backBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Conn"));
+    }
+
+    private void createWithdrawPanel() {
+        withdrawPanel = new JPanel(new GridLayout(4, 2));
+        JTextField amountField = new JTextField();
+        JButton withdrawBtn = new JButton("Withdraw");
+        JButton backBtn = new JButton("Back");
+
+        withdrawPanel.add(new JLabel("Amount:"));
+        withdrawPanel.add(amountField);
+        withdrawPanel.add(withdrawBtn);
+        withdrawPanel.add(backBtn);
+
+        withdrawBtn.addActionListener(e -> {
+            try {
+                double amount = Double.parseDouble(amountField.getText());
+                if (bank.withdraw(currentAccount, amount)) {
+                    JOptionPane.showMessageDialog(this, "Withdrawal successful! New balance: $" + currentAccount.getBalance());
+                    amountField.setText("");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Insufficient funds or invalid amount!");
+                }
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Invalid amount!");
+            }
+        });
+
+        backBtn.addActionListener(e -> cardLayout.show(getContentPane(), "Conn"));
+    }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-
-        int option;
-        do {
-            System.out.println("\n--- Banking System Menu ---");
-            System.out.println("1. Create Account");
-            System.out.println("2. Login to Account");
-            System.out.println("3. Exit");
-            System.out.print("Enter your choice: ");
-            option = scanner.nextInt();
-
-            switch (option) {
-                case 1:
-                    createAccount(scanner);
-                    break;
-                case 2:
-                    login(scanner);
-                    break;
-                case 3:
-                    System.out.println("Thank you for using the Banking System!");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
-            }
-
-        } while (option != 3);
-
-        scanner.close();
-    }
-
-    private static void createAccount(Scanner scanner) {
-        scanner.nextLine(); 
-        System.out.print("Enter Account Type (1 for Savings, 2 for Current): ");
-        int accountType = scanner.nextInt();
-        scanner.nextLine();
-
-        System.out.print("Enter Account Number: ");
-        String accountNumber = scanner.nextLine();
-
-        if (accounts.containsKey(accountNumber)) {
-            System.out.println("Account already exists with this number!");
-            return;
-        }
-
-        System.out.print("Enter Account Holder Name: ");
-        String accountHolderName = scanner.nextLine();
-
-        System.out.print("Enter Initial Balance: ");
-        double initialBalance = scanner.nextDouble();
-        scanner.nextLine();
-
-        System.out.print("Set 4-digit PIN: ");
-        String pin = scanner.nextLine();
-
-        BankAccount account;
-        if (accountType == 1) {
-            account = new SavingsAccount(accountNumber, accountHolderName, initialBalance, pin);
-        } else {
-            account = new CurrentAccount(accountNumber, accountHolderName, initialBalance, pin);
-        }
-
-        accounts.put(accountNumber, account);
-        System.out.println("Account created successfully!");
-    }
-
-    private static void login(Scanner scanner) {
-        scanner.nextLine();
-        System.out.print("Enter Account Number: ");
-        String accNum = scanner.nextLine();
-
-        BankAccount account = accounts.get(accNum);
-        if (account == null) {
-            System.out.println("Account not found!");
-            return;
-        }
-
-        System.out.print("Enter PIN: ");
-        String pin = scanner.nextLine();
-
-        if (!account.authenticate(pin)) {
-            System.out.println("Invalid PIN!");
-            return;
-        }
-
-        int choice;
-        do {
-            System.out.println("\n--- Account Menu ---");
-            System.out.println("1. Deposit");
-            System.out.println("2. Withdraw");
-            System.out.println("3. Balance Inquiry");
-            System.out.println("4. Logout");
-            System.out.print("Enter your choice: ");
-            choice = scanner.nextInt();
-
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter amount to deposit: ");
-                    double depositAmount = scanner.nextDouble();
-                    account.deposit(depositAmount);
-                    break;
-                case 2:
-                    System.out.print("Enter amount to withdraw: ");
-                    double withdrawAmount = scanner.nextDouble();
-                    account.withdraw(withdrawAmount);
-                    break;
-                case 3:
-                    System.out.println("Current Balance: " + account.getBalance());
-                    break;
-                case 4:
-                    System.out.println("Logged out successfully.");
-                    break;
-                default:
-                    System.out.println("Invalid choice. Please try again.");
-            }
-
-        } while (choice != 4);
+        SwingUtilities.invokeLater(() -> new BankManagementSystem().setVisible(true));
     }
 }
-
